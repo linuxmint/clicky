@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Screenshot
+Comment=Save images of your screen or individual windows
+Exec=clicky
+Icon=clicky
+Terminal=false
+Type=Application
+Encoding=UTF-8
+Categories=GTK;GNOME;Utility;X-GNOME-Utilities;
+Keywords=project;keywords;
+StartupNotify=false

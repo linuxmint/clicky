@@ -1,0 +1,18 @@
+Source: clicky
+Section: gnome
+Priority: optional
+Maintainer: Linux Mint <root@linuxmint.com>
+Build-Depends: debhelper (>= 9)
+Standards-Version: 3.9.6
+Rules-Requires-Root: no
+
+Package: clicky
+Architecture: all
+Depends: gir1.2-xapp-1.0 (>= 1.4),
+         python3,
+         python3-gi,
+         python3-setproctitle,
+         xapps-common,
+         ${misc:Depends}
+Description: Save images of your screen or individual windows
+ Desktop screenshot application.

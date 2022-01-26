@@ -1,0 +1,5 @@
+#!/bin/bash
+intltool-extract --type=gettext/glade usr/share/clicky/clicky.ui
+intltool-extract --type=gettext/glade usr/share/clicky/shortcuts.ui
+xgettext --language=Python --keyword=_ --keyword=N_ --output=clicky.pot usr/lib/clicky/*.py generate_desktop_files usr/share/clicky/clicky.ui.h usr/share/clicky/shortcuts.ui.h
+rm -f usr/share/clicky/*.ui.h

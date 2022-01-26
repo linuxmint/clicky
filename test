@@ -1,0 +1,5 @@
+#!/bin/bash
+sudo rm -rf /usr/lib/clicky
+sudo rm -rf /usr/share/clicky
+sudo cp -R usr /
+clicky
