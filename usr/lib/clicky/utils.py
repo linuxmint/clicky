@@ -4,11 +4,13 @@ import dbus
 import os
 import sys
 import gi
-from gi.repository import Gtk, Gio, Gdk, GdkPixbuf, GLib
+gi.require_version('GSound', '1.0')
+from gi.repository import Gtk, Gio, Gdk, GdkPixbuf, GLib, GSound
+from common import *
 
 ########### SHELL #########################3333
 
-def shell_get_pixbuf(rect, take_window_shot, include_pointer, flash):
+def shell_get_pixbuf(rect, take_window_shot, include_frame, include_cursor, flash):
     pixbuf = None
     try:
         path = os.path.join(GLib.get_user_cache_dir(), "clicky")
@@ -20,15 +22,17 @@ def shell_get_pixbuf(rect, take_window_shot, include_pointer, flash):
         interface = bus.get_object('org.gnome.Shell.Screenshot', '/org/gnome/Shell/Screenshot')
         manager = dbus.Interface(interface, 'org.gnome.Shell.Screenshot')
 
+        play_sound_effect()
+
         if take_window_shot:
-            (success, filename_used) = manager.ScreenshotWindow(True, include_pointer, flash, filename)
+            (success, filename_used) = manager.ScreenshotWindow(include_frame, include_cursor, flash, filename)
         elif rect != None:
-            (success, filename_used) = manager.ScreenshotArea(rect.x, rect.y, rect.width, rect.height, include_pointer, flash, filename)
+            (success, filename_used) = manager.ScreenshotArea(rect.x, rect.y, rect.width, rect.height, flash, filename)
         else:
-            (success, filename_used) = manager.Screenshot(include_pointer, flash, filename)
+            (success, filename_used) = manager.Screenshot(include_frame, flash, filename)
 
         if success:
-            pixbuf = GdkPixbuf.Pixbuf.new_from_file(filename)
+            pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_size(filename, 400, -1)
             os.unlink(filename)
     except Exception as e:
         print(e)
@@ -190,7 +194,7 @@ def screenshot_fallback_find_current_window():
     return window
 
 
-def x11_get_pixbuf(rect, take_window_shot, include_pointer, flash):
+def x11_get_pixbuf(rect, take_window_shot, include_frame, include_cursor, flash):
     frame_offset = { 0, 0, 0, 0 }
     window = screenshot_fallback_find_current_window()
     (real_coords, screenshot_coords) = screenshot_fallback_get_window_rect_coords(window)
@@ -326,6 +330,7 @@ def x11_get_pixbuf(rect, take_window_shot, include_pointer, flash):
             #                         GDK_INTERP_BILINEAR,
             #                         255)
 
+    play_sound_effect()
     screenshot_fallback_fire_flash(window, rectangle)
 
     return screenshot
@@ -333,35 +338,18 @@ def x11_get_pixbuf(rect, take_window_shot, include_pointer, flash):
 
 ################### UTILS #####################
 
-def screenshot_play_sound_effect(event_id, event_desc):
-    c = ca_gtk_context_get()
-    # res = ca_proplist_create(&p)
-    # if res < 0:
-    #     goto done
+@async_function
+def play_sound_effect():
+    ctx = GSound.Context()
+    ctx.init()
+    ctx.play_simple({GSound.ATTR_EVENT_ID: "screen-capture"})
+    GLib.usleep(2000000)
 
-    # res = ca_proplist_sets(p, CA_PROP_EVENT_ID, event_id)
-    # if res < 0:
-    #     goto done
-
-    # res = ca_proplist_sets(p, CA_PROP_EVENT_DESCRIPTION, event_desc)
-    # if res < 0:
-    #     goto done
-
-    # res = ca_proplist_sets(p, CA_PROP_CANBERRA_CACHE_CONTROL, "permanent")
-    # if res < 0:
-    #     goto done
-
-    # ca_context_play_full(c, 0, p, None, None)
-
-    # done:
-    #     if(p != None)
-    #         ca_proplist_destroy(p)
-
-def get_pixbuf(rect, take_window_shot, include_pointer, flash):
-    screenshot = shell_get_pixbuf(rect, take_window_shot, include_pointer, flash)
+def get_pixbuf(rect, take_window_shot, include_frame, include_cursor, flash):
+    screenshot = shell_get_pixbuf(rect, take_window_shot, include_frame, include_cursor, flash)
     if screenshot == None:
         print("Unable to use GNOME's interface, falling back to X11 method")
-        screenshot = x11_get_pixbuf(rect, take_window_shot, include_pointer, flash)
+        screenshot = x11_get_pixbuf(rect, take_window_shot, include_frame, include_cursor, flash)
     return screenshot
 
 def screenshot_show_dialog(parent, message_type, buttons_type, message, detail):

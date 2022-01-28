@@ -9,6 +9,7 @@ Rules-Requires-Root: no
 Package: clicky
 Architecture: all
 Depends: gir1.2-xapp-1.0 (>= 1.4),
+         gir1.2-gsound-1.0,
          python3,
          python3-gi,
          python3-setproctitle,

@@ -125,15 +125,16 @@ class MainWindow():
         rect = Gdk.Rectangle()
         rect.x = 0
         rect.y = 0
-        rect.height = 1200
-        rect.width = 1900
+        rect.height = 800
+        rect.width = 600
         # flash.fire(rect)
         import utils
-        take_window_shot = False
-        include_pointer = False
+        take_window_shot = True
+        include_frame = True
+        include_cursor = False
         flash = True
-        rect = None
-        pixbuf = utils.get_pixbuf(rect, take_window_shot, include_pointer, flash)
+        # rect = None
+        pixbuf = utils.get_pixbuf(rect, take_window_shot, include_frame, include_cursor, flash)
         self.builder.get_object("screenshot_image").set_from_pixbuf(pixbuf)
         self.builder.get_object("screenshot_image").show()
 
