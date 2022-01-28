@@ -120,14 +120,22 @@ class MainWindow():
         self.builder.get_object("button_test").connect("clicked", self.test)
 
     def test(self, widget):
-        import flash
-        flash = flash.CheeseFlash()
+        # import flash
+        # flash = flash.CheeseFlash()
         rect = Gdk.Rectangle()
         rect.x = 0
         rect.y = 0
         rect.height = 1200
         rect.width = 1900
-        flash.fire(rect)
+        # flash.fire(rect)
+        import utils
+        take_window_shot = False
+        include_pointer = False
+        flash = True
+        rect = None
+        pixbuf = utils.get_pixbuf(rect, take_window_shot, include_pointer, flash)
+        self.builder.get_object("screenshot_image").set_from_pixbuf(pixbuf)
+        self.builder.get_object("screenshot_image").show()
 
     @idle_function
     def navigate_to(self, page, name=""):
