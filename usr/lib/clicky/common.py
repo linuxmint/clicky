@@ -18,4 +18,18 @@ def idle_function(func):
         GObject.idle_add(func, *args)
     return wrapper
 
-SCREENSHOT_MODE_DESKTOP, SCREENSHOT_MODE_AREA, SCREENSHOT_MODE_WINDOW = range(3)
+CAPTURE_MODE_SCREEN = 'screen'
+CAPTURE_MODE_WINDOW = 'window'
+CAPTURE_MODE_AREA = 'area'
+
+class Options():
+
+    def __init__(self, settings):
+        self.mode = settings.get_string("capture-mode")
+        self.delay = settings.get_int("delay")
+        self.include_pointer = settings.get_boolean("include-pointer")
+        self.add_shadow = settings.get_boolean("add-shadow")
+        self.include_borders = settings.get_boolean("include-borders")
+        self.enable_flash = settings.get_boolean("enable-flash")
+        self.enable_sound = settings.get_boolean("enable-sound")
+        self.enable_dbus_method = settings.get_boolean("enable-dbus-method")

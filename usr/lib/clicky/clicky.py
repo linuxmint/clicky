@@ -16,6 +16,7 @@ gi.require_version("Gtk", "3.0")
 gi.require_version('XApp', '1.0')
 from gi.repository import Gtk, Gdk, Gio, XApp
 
+import utils
 from common import *
 
 setproctitle.setproctitle("clicky")
@@ -63,6 +64,12 @@ class MainWindow():
         self.window.set_icon_name("clicky")
         self.window.set_resizable(False)
         self.stack = self.builder.get_object("stack")
+        self.radio_mode_screen = self.builder.get_object("radio_mode_screen")
+        self.radio_mode_window = self.builder.get_object("radio_mode_window")
+        self.radio_mode_area = self.builder.get_object("radio_mode_area")
+        self.checkbox_pointer = self.builder.get_object("checkbox_pointer")
+        self.checkbox_shadow = self.builder.get_object("checkbox_shadow")
+        self.spin_delay = self.builder.get_object("spin_delay")
 
         # CSS
         provider = Gtk.CssProvider()
@@ -70,55 +77,44 @@ class MainWindow():
         screen = Gdk.Display.get_default_screen(Gdk.Display.get_default())
         Gtk.StyleContext.add_provider_for_screen(screen, provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
-        # Widget signals
-        self.window.connect("key-press-event",self.on_key_press_event)
-
-        #dark mode
+        # Settings
         prefer_dark_mode = self.settings.get_boolean("prefer-dark-mode")
         Gtk.Settings.get_default().set_property("gtk-application-prefer-dark-theme", prefer_dark_mode)
-        self.builder.get_object("darkmode_switch").set_active(prefer_dark_mode)
-        self.builder.get_object("darkmode_switch").connect("notify::active", self.on_darkmode_switch_toggled)
 
-        # Menubar
-        accel_group = Gtk.AccelGroup()
-        self.window.add_accel_group(accel_group)
-        menu = self.builder.get_object("main_menu")
-        item = Gtk.ImageMenuItem()
-        item.set_image(Gtk.Image.new_from_icon_name("preferences-desktop-keyboard-shortcuts-symbolic", Gtk.IconSize.MENU))
-        item.set_label(_("Preferences"))
-        item.connect("activate", self.open_preferences)
-        menu.append(item)
-        item = Gtk.ImageMenuItem()
-        item.set_image(Gtk.Image.new_from_icon_name("preferences-desktop-keyboard-shortcuts-symbolic", Gtk.IconSize.MENU))
-        item.set_label(_("Keyboard Shortcuts"))
-        item.connect("activate", self.open_keyboard_shortcuts)
-        key, mod = Gtk.accelerator_parse("<Control>K")
-        item.add_accelerator("activate", accel_group, key, mod, Gtk.AccelFlags.VISIBLE)
-        menu.append(item)
-        item = Gtk.ImageMenuItem()
-        item.set_image(Gtk.Image.new_from_icon_name("help-about-symbolic", Gtk.IconSize.MENU))
-        item.set_label(_("About"))
-        item.connect("activate", self.open_about)
-        key, mod = Gtk.accelerator_parse("F1")
-        item.add_accelerator("activate", accel_group, key, mod, Gtk.AccelFlags.VISIBLE)
-        menu.append(item)
-        item = Gtk.ImageMenuItem(label=_("Quit"))
-        image = Gtk.Image.new_from_icon_name("application-exit-symbolic", Gtk.IconSize.MENU)
-        item.set_image(image)
-        item.connect('activate', self.on_menu_quit)
-        key, mod = Gtk.accelerator_parse("<Control>Q")
-        item.add_accelerator("activate", accel_group, key, mod, Gtk.AccelFlags.VISIBLE)
-        key, mod = Gtk.accelerator_parse("<Control>W")
-        item.add_accelerator("activate", accel_group, key, mod, Gtk.AccelFlags.VISIBLE)
-        menu.append(item)
-        menu.show_all()
+        mode = self.settings.get_string("capture-mode")
+        self.builder.get_object(f"radio_mode_{mode}").set_active(True)
+
+        self.settings.bind("include-pointer", self.checkbox_pointer, "active", Gio.SettingsBindFlags.DEFAULT)
+        self.settings.bind("add-shadow", self.checkbox_shadow, "active", Gio.SettingsBindFlags.DEFAULT)
+        self.settings.bind("delay", self.spin_delay, "value", Gio.SettingsBindFlags.DEFAULT)
+
+        # import xapp.SettingsWidgets
+        # spin = xapp.SettingsWidgets.SpinButton(_("Delay"), units="seconds")
+        # self.builder.get_object("box_options").pack_start(spin, False, False, 0)
 
         self.window.show()
 
         self.builder.get_object("go_back_button").hide()
-        self.builder.get_object("go_back_button").connect("clicked", self.go_back)
 
+        # Widget signals
+        self.window.connect("key-press-event",self.on_key_press_event)
+        self.builder.get_object("go_back_button").connect("clicked", self.go_back)
         self.builder.get_object("button_take_screenshot").connect("clicked", self.start_screenshot)
+        self.radio_mode_screen.connect("toggled", self.on_capture_mode_toggled)
+        self.radio_mode_window.connect("toggled", self.on_capture_mode_toggled)
+        self.radio_mode_area.connect("toggled", self.on_capture_mode_toggled)
+
+    def get_capture_mode(self):
+        if self.radio_mode_screen.get_active():
+            mode = CAPTURE_MODE_SCREEN
+        elif self.radio_mode_window.get_active():
+            mode = CAPTURE_MODE_WINDOW
+        else:
+            mode = CAPTURE_MODE_AREA
+        return mode
+
+    def on_capture_mode_toggled(self, widget):
+        self.settings.set_string("capture-mode", self.get_capture_mode())
 
     def start_screenshot(self, widget):
         self.hide_window()
@@ -137,20 +133,17 @@ class MainWindow():
         self.window.set_skip_taskbar_hint(False)
 
     def take_screenshot(self):
-        import utils
-        if self.builder.get_object("radio_window").get_active():
-            mode = SCREENSHOT_MODE_WINDOW
-        elif self.builder.get_object("radio_area").get_active():
-            mode = SCREENSHOT_MODE_AREA
-        else:
-            mode = SCREENSHOT_MODE_DESKTOP
-        include_frame = self.builder.get_object("checkbox_border").get_active()
-        include_cursor = self.builder.get_object("checkbox_cursor").get_active()
-        pixbuf = utils.get_pixbuf(mode, include_frame, include_cursor)
-        self.builder.get_object("screenshot_image").set_from_pixbuf(pixbuf)
-        self.builder.get_object("screenshot_image").show()
-        self.navigate_to("screenshot_page")
-        self.show_window()
+        try:
+            options = Options(self.settings)
+            pixbuf = utils.capture_pixbuf(options)
+            self.builder.get_object("screenshot_image").set_from_pixbuf(pixbuf)
+            self.builder.get_object("screenshot_image").show()
+            self.navigate_to("screenshot_page")
+            self.show_window()
+        except:
+            print(traceback.format_exc())
+            print("Fatal exception occured, quitting!")
+            sys.exit(1)
 
     @idle_function
     def navigate_to(self, page, name=""):
@@ -159,9 +152,6 @@ class MainWindow():
         else:
             self.builder.get_object("go_back_button").show()
         self.stack.set_visible_child_name(page)
-
-    def open_preferences(self, widget):
-        self.navigate_to("preferences_page")
 
     def go_back(self, widget):
         self.navigate_to("main_page")
@@ -202,11 +192,6 @@ class MainWindow():
         window.set_title(_("Screenshot"))
         window.show()
 
-    def on_darkmode_switch_toggled(self, widget, key):
-        prefer_dark_mode = widget.get_active()
-        self.settings.set_boolean("prefer-dark-mode", prefer_dark_mode)
-        Gtk.Settings.get_default().set_property("gtk-application-prefer-dark-theme", prefer_dark_mode)
-
     def on_menu_quit(self, widget):
         self.application.quit()
 
@@ -229,3 +214,4 @@ class MainWindow():
 if __name__ == "__main__":
     application = MyApplication("org.x.clicky", Gio.ApplicationFlags.FLAGS_NONE)
     application.run()
+
