@@ -61,6 +61,7 @@ class MainWindow():
         self.window = self.builder.get_object("main_window")
         self.window.set_title(_("Screenshot"))
         self.window.set_icon_name("clicky")
+        self.window.set_resizable(False)
         self.stack = self.builder.get_object("stack")
 
         # CSS
@@ -117,26 +118,39 @@ class MainWindow():
         self.builder.get_object("go_back_button").hide()
         self.builder.get_object("go_back_button").connect("clicked", self.go_back)
 
-        self.builder.get_object("button_test").connect("clicked", self.test)
+        self.builder.get_object("button_take_screenshot").connect("clicked", self.start_screenshot)
 
-    def test(self, widget):
-        # import flash
-        # flash = flash.CheeseFlash()
-        rect = Gdk.Rectangle()
-        rect.x = 0
-        rect.y = 0
-        rect.height = 800
-        rect.width = 600
-        # flash.fire(rect)
+    def start_screenshot(self, widget):
+        self.hide_window()
+        GObject.timeout_add(200, self.take_screenshot)
+
+    def hide_window(self):
+        self.window.hide()
+        self.window.set_opacity(0)
+        self.window.set_skip_pager_hint(True)
+        self.window.set_skip_taskbar_hint(True)
+
+    def show_window(self):
+        self.window.show()
+        self.window.set_opacity(1)
+        self.window.set_skip_pager_hint(False)
+        self.window.set_skip_taskbar_hint(False)
+
+    def take_screenshot(self):
         import utils
-        take_window_shot = True
-        include_frame = True
-        include_cursor = False
-        flash = True
-        # rect = None
-        pixbuf = utils.get_pixbuf(rect, take_window_shot, include_frame, include_cursor, flash)
+        if self.builder.get_object("radio_window").get_active():
+            mode = SCREENSHOT_MODE_WINDOW
+        elif self.builder.get_object("radio_area").get_active():
+            mode = SCREENSHOT_MODE_AREA
+        else:
+            mode = SCREENSHOT_MODE_DESKTOP
+        include_frame = self.builder.get_object("checkbox_border").get_active()
+        include_cursor = self.builder.get_object("checkbox_cursor").get_active()
+        pixbuf = utils.get_pixbuf(mode, include_frame, include_cursor)
         self.builder.get_object("screenshot_image").set_from_pixbuf(pixbuf)
         self.builder.get_object("screenshot_image").show()
+        self.navigate_to("screenshot_page")
+        self.show_window()
 
     @idle_function
     def navigate_to(self, page, name=""):

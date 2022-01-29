@@ -10,7 +10,7 @@ from common import *
 
 ########### SHELL #########################3333
 
-def shell_get_pixbuf(rect, take_window_shot, include_frame, include_cursor, flash):
+def shell_get_pixbuf(mode, include_frame, include_cursor):
     pixbuf = None
     try:
         path = os.path.join(GLib.get_user_cache_dir(), "clicky")
@@ -24,15 +24,19 @@ def shell_get_pixbuf(rect, take_window_shot, include_frame, include_cursor, flas
 
         play_sound_effect()
 
-        if take_window_shot:
-            (success, filename_used) = manager.ScreenshotWindow(include_frame, include_cursor, flash, filename)
-        elif rect != None:
-            (success, filename_used) = manager.ScreenshotArea(rect.x, rect.y, rect.width, rect.height, flash, filename)
+        if mode == SCREENSHOT_MODE_DESKTOP:
+            (success, filename_used) = manager.Screenshot(include_frame, True, filename)
+        elif mode == SCREENSHOT_MODE_WINDOW:
+            (success, filename_used) = manager.ScreenshotWindow(include_frame, include_cursor, True, filename)
         else:
-            (success, filename_used) = manager.Screenshot(include_frame, flash, filename)
+            x = 0
+            y = 0
+            height = 800
+            width = 600
+            (success, filename_used) = manager.ScreenshotArea(x, y, width, height, True, filename)
 
         if success:
-            pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_size(filename, 400, -1)
+            pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_size(filename, -1, 150)
             os.unlink(filename)
     except Exception as e:
         print(e)
@@ -194,7 +198,14 @@ def screenshot_fallback_find_current_window():
     return window
 
 
-def x11_get_pixbuf(rect, take_window_shot, include_frame, include_cursor, flash):
+def x11_get_pixbuf(mode, include_frame, include_cursor):
+
+    rect = Gdk.Rectangle()
+    rect.x = 0
+    rect.y = 0
+    rect.height = 800
+    rect.width = 600
+    take_window_shot = False
     frame_offset = { 0, 0, 0, 0 }
     window = screenshot_fallback_find_current_window()
     (real_coords, screenshot_coords) = screenshot_fallback_get_window_rect_coords(window)
@@ -345,11 +356,11 @@ def play_sound_effect():
     ctx.play_simple({GSound.ATTR_EVENT_ID: "screen-capture"})
     GLib.usleep(2000000)
 
-def get_pixbuf(rect, take_window_shot, include_frame, include_cursor, flash):
-    screenshot = shell_get_pixbuf(rect, take_window_shot, include_frame, include_cursor, flash)
+def get_pixbuf(mode, include_frame, include_cursor):
+    screenshot = shell_get_pixbuf(mode, include_frame, include_cursor)
     if screenshot == None:
         print("Unable to use GNOME's interface, falling back to X11 method")
-        screenshot = x11_get_pixbuf(rect, take_window_shot, include_frame, include_cursor, flash)
+        screenshot = x11_get_pixbuf(mode, include_frame, include_cursor)
     return screenshot
 
 def screenshot_show_dialog(parent, message_type, buttons_type, message, detail):

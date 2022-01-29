@@ -18,3 +18,4 @@ def idle_function(func):
         GObject.idle_add(func, *args)
     return wrapper
 
+SCREENSHOT_MODE_DESKTOP, SCREENSHOT_MODE_AREA, SCREENSHOT_MODE_WINDOW = range(3)
